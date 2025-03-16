@@ -1,0 +1,18 @@
+[
+  {
+    "text": "Retrieval-augmented generation (RAG) is a technique that enables generative artificial intelligence (Gen AI) models to retrieve and incorporate new information. It modifies interactions with a large language model (LLM) so that the model responds to user queries with reference to a specified set of documents, using this information to supplement information from its pre-existing training data. This allows LLMs to use domain-specific and/or updated information.  Use cases include providing chatbot access to internal company data or generating responses based on authoritative sources.",
+    "metadata": {
+      "source": "https://en.wikipedia.org/wiki/Retrieval-augmented_generation",
+      "title": "Retrieval-augmented generation",
+      "type": "wikipedia"
+    }
+  },
+  {
+    "text": "RAG improves large language models (LLMs) by incorporating information retrieval before generating responses. Unlike traditional LLMs that rely on static training data, RAG pulls relevant text from databases, uploaded documents, or web sources. According to Ars Technica, \"RAG is a way of improving LLM performance, in essence by blending the LLM process with a web search or other document look-up process to help LLMs stick to the facts.\" This method helps reduce AI hallucinations, which have led to real-world issues like chatbots inventing policies or lawyers citing nonexistent legal cases.\nBy dynamically retrieving information, RAG enables AI to provide more accurate responses without frequent retraining. According to IBM, \"RAG also reduces the need for users to continuously train the model on new data and update its parameters as circumstances evolve. In this way, RAG can lower the computational and financial costs of running LLM-powered chatbots in an enterprise setting.\"",
+    "metadata": {
+      "source": "https://en.wikipedia.org/wiki/Retrieval-augmented_generation",
+      "title": "Retrieval-augmented generation",
+      "type": "wikipedia"
+    }
+  }
+]

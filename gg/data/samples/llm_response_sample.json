@@ -1,0 +1,4 @@
+{
+  "response": "I found some information that might help with your question: 'What are the benefits of RAG?'\n\n# RAG (Retrieval-Augmented Generation)\n\nRetrieval-Augmented Generation (RAG) is a technique used in natural language processing that combines retrieval-based and generation-based approaches to produce more accurate and informative responses.\n\n## How RAG Works\n\n1. **Retrieval**: When a query is recei...\n\nSource: data/sample.txt",
+  "using_llm": false
+}

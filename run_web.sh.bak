@@ -1,0 +1,20 @@
+#!/bin/bash
+
+# Activate virtual environment if it exists
+if [ -d "venv" ]; then
+    echo "Activating virtual environment..."
+    source venv/bin/activate
+fi
+
+# Set Flask environment variables
+export FLASK_APP=app.py
+export FLASK_ENV=development
+export FLASK_DEBUG=1
+
+# Create necessary directories
+mkdir -p data/vector_store data/uploads
+
+# Run the application
+echo "Starting the Gemini-powered RAG Chatbot Web Interface..."
+echo "Open your browser and navigate to http://localhost:8000"
+python -m flask run --host=0.0.0.0 --port=8000 

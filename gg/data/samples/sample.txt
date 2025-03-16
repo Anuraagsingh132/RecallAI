@@ -1,0 +1,34 @@
+# RAG (Retrieval-Augmented Generation)
+
+Retrieval-Augmented Generation (RAG) is a technique used in natural language processing that combines retrieval-based and generation-based approaches to produce more accurate and informative responses.
+
+## How RAG Works
+
+1. **Retrieval**: When a query is received, the system searches through a knowledge base to find relevant documents or passages.
+2. **Augmentation**: The retrieved information is used to augment or provide context for the generation step.
+3. **Generation**: A language model generates a response based on both the user query and the retrieved information.
+
+## Benefits of RAG
+
+- **Improved Accuracy**: By grounding responses in retrieved information, RAG reduces hallucinations and factual errors.
+- **Up-to-date Information**: The knowledge base can be updated independently of the language model.
+- **Transparency**: Sources can be cited to show where information came from.
+- **Efficiency**: No need to retrain the entire language model to update knowledge.
+
+## Applications
+
+RAG is commonly used in:
+- Question answering systems
+- Chatbots
+- Customer support
+- Research assistance
+- Content generation with factual backing
+
+## Implementation Components
+
+A typical RAG system consists of:
+1. A document store or vector database
+2. An embedding model for semantic search
+3. A retriever component
+4. A language model for generation
+5. A prompt engineering strategy 

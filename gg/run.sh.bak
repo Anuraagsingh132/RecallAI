@@ -1,0 +1,15 @@
+#!/bin/bash
+
+# Activate virtual environment if it exists
+if [ -d "venv" ]; then
+    echo "Activating virtual environment..."
+    source venv/bin/activate
+fi
+
+# Set Flask environment variables
+export FLASK_APP=app.py
+export FLASK_ENV=development
+
+# Run the application
+echo "Starting the RAG Chatbot API..."
+python -m flask run 

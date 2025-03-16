@@ -1,0 +1,22 @@
+#!/bin/bash
+
+# Kill any existing processes using ports 5000 or 8000
+echo "Checking for processes using ports 5000 or 8000..."
+pkill -f "flask run" || true
+for pid in $(ps -ef | grep "python.*app.py" | grep -v grep | awk '{print $2}'); do
+    echo "Killing process $pid"
+    kill -9 $pid || true
+done
+
+# Create necessary directories
+mkdir -p data/vector_store data/uploads
+
+# Set Flask environment variables
+export FLASK_APP=app.py
+export FLASK_ENV=development
+export FLASK_DEBUG=1
+
+# Run the application with a different port
+echo "Starting the Gemini-powered RAG Chatbot Web Interface..."
+echo "Open your browser and navigate to http://localhost:8080"
+python -m flask run --host=0.0.0.0 --port=8080 
