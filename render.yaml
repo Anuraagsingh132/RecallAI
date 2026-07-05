@@ -1,10 +1,11 @@
-services:
+databases:
   # 1. PostgreSQL Database
-  - type: psql
-    name: recallai-db
+  - name: recallai-db
     plan: free
-    version: 15
+    databaseName: recallai
+    user: recallai_user
 
+services:
   # 2. Qdrant Vector Database (Private Service)
   - type: pserv
     name: recallai-qdrant
