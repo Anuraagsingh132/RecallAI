@@ -9,7 +9,7 @@ services:
   # 2. Qdrant Vector Database (Private Service)
   - type: pserv
     name: recallai-qdrant
-    env: docker
+    env: image
     plan: free
     image:
       url: qdrant/qdrant:latest
