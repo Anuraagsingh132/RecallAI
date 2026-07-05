@@ -6,18 +6,7 @@ databases:
     user: recallai_user
 
 services:
-  # 2. Qdrant Vector Database (Private Service)
-  - type: pserv
-    name: recallai-qdrant
-    runtime: image
-    plan: free
-    image:
-      url: docker.io/qdrant/qdrant:latest
-    envVars:
-      - key: QDRANT__SERVICE__GRPC_PORT
-        value: "6334"
-
-  # 3. Web Service (FastAPI)
+  # 2. Web Service (FastAPI)
   - type: web
     name: recallai-web
     runtime: docker
@@ -29,7 +18,9 @@ services:
           name: recallai-db
           property: connectionString
       - key: QDRANT_URL
-        value: http://recallai-qdrant:6333
+        sync: false
+      - key: QDRANT_API_KEY
+        sync: false
       - key: ENV
         value: production
       - key: JWT_SECRET

@@ -7,7 +7,7 @@ QDRANT_URL = settings.QDRANT_URL
 QDRANT_PATH = os.getenv("QDRANT_PATH", "qdrant_data")
 
 if QDRANT_URL:
-    qdrant_client = AsyncQdrantClient(url=QDRANT_URL)
+    qdrant_client = AsyncQdrantClient(url=QDRANT_URL, api_key=settings.QDRANT_API_KEY)
 else:
     qdrant_client = AsyncQdrantClient(path=QDRANT_PATH)
 COLLECTION_NAME = "recallai_chunks"

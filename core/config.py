@@ -12,6 +12,7 @@ class Settings(BaseSettings):
 
     DATABASE_URL: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/recallai"
     QDRANT_URL: str = "http://localhost:6333"
+    QDRANT_API_KEY: Optional[str] = None
     SENTRY_DSN: Optional[str] = None
     FRONTEND_CORS_ORIGIN: str = "http://localhost:3000"
     GROQ_API_KEY: Optional[str] = None
