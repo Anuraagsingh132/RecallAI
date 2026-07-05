@@ -1,7 +1,7 @@
 # Python
 __pycache__/
 *.py[cod]
-*$py.class
+*.class
 *.so
 .Python
 env/
@@ -44,4 +44,15 @@ data/uploads/
 
 # OS specific
 .DS_Store
-Thumbs.db 
+Thumbs.db
+
+# Extra ignores
+venv_task1/
+.coverage
+uploads/
+qdrant_data/
+*.pdf
+*.txt
+!requirements.txt
+!requirements-lock.txt
+backups/

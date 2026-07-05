@@ -1,119 +1,210 @@
-#!/usr/bin/env python3
-import requests
-import json
+import pytest
+import pytest_asyncio
+from httpx import AsyncClient, ASGITransport
+import uuid
+from sqlmodel import select
 import os
-import time
 
-API_BASE_URL = "http://localhost:5000"
+from main import app
+from core.database import AsyncSessionLocal
+from models.base import User, Conversation, Message, Document
+from services.generation import AnswerResponse
+from api.routers.auth import get_password_hash, create_access_token
 
-def test_index_endpoint():
-    """Test the index endpoint."""
-    print("\n=== Testing Index Endpoint ===")
+# Removed duplicated setup_env
+
+@pytest_asyncio.fixture
+async def async_client():
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        yield ac
+
+@pytest_asyncio.fixture
+async def mock_user_id():
+    async with AsyncSessionLocal() as session:
+        user = User(username=f"mock_{uuid.uuid4()}", hashed_password=get_password_hash("pwd"))
+        session.add(user)
+        await session.commit()
+        await session.refresh(user)
+        token = create_access_token({"sub": user.username})
+        return {"id": str(user.id), "token": token}
+
+@pytest_asyncio.fixture
+async def other_user_id():
+    async with AsyncSessionLocal() as session:
+        user = User(username=f"other_{uuid.uuid4()}", hashed_password=get_password_hash("pwd"))
+        session.add(user)
+        await session.commit()
+        await session.refresh(user)
+        token = create_access_token({"sub": user.username})
+        return {"id": str(user.id), "token": token}
+
+@pytest.mark.asyncio
+async def test_upload_document(async_client, mock_user_id, monkeypatch):
+    mock_called = False
+    def mock_trigger():
+        nonlocal mock_called
+        mock_called = True
+    monkeypatch.setattr("api.routers.documents.trigger_new_job", mock_trigger)
     
-    response = requests.get(f"{API_BASE_URL}/")
+    # Needs valid magic bytes for PDF
+    files = {"file": ("test.pdf", b"%PDF-1.4\n%mock\n", "application/pdf")}
+    response = await async_client.post(
+        "/documents/upload",
+        files=files,
+        headers={"Authorization": f"Bearer {mock_user_id['token']}"}
+    )
+        
+    assert response.status_code == 200
     data = response.json()
+    assert data["message"] == "Upload accepted"
+    assert "document_id" in data
+    assert data["status"] == "PENDING"
+    assert mock_called, "trigger_new_job was not called!"
     
-    print(f"Status Code: {response.status_code}")
-    print(f"Response: {json.dumps(data, indent=2)}")
-    
-    return response.status_code == 200
+    # Verify it's in the DB
+    async with AsyncSessionLocal() as session:
+        doc = await session.get(Document, uuid.UUID(data["document_id"]))
+        assert doc is not None
+        assert doc.user_id == uuid.UUID(mock_user_id['id'])
+        assert doc.filename == "test.pdf"
 
-def test_load_text_document():
-    """Test loading a text document."""
-    print("\n=== Testing Load Text Document ===")
-    
-    payload = {
-        "source": "text",
-        "path": "data/sample.txt"
-    }
-    
-    response = requests.post(f"{API_BASE_URL}/load", json=payload)
-    data = response.json()
-    
-    print(f"Status Code: {response.status_code}")
-    print(f"Response: {json.dumps(data, indent=2)}")
-    
-    return response.status_code == 200
+@pytest.mark.asyncio
+async def test_upload_non_pdf(async_client, mock_user_id):
+    files = {"file": ("test.txt", b"this is text", "text/plain")}
+    response = await async_client.post(
+        "/documents/upload",
+        files=files,
+        headers={"Authorization": f"Bearer {mock_user_id['token']}"}
+    )
+    assert response.status_code == 400
+    assert "Only PDF files are allowed" in response.json()["detail"]
 
-def test_search_endpoint():
-    """Test the search endpoint."""
-    print("\n=== Testing Search Endpoint ===")
-    
-    payload = {
-        "query": "What are the benefits of RAG?",
-        "top_k": 3
-    }
-    
-    response = requests.post(f"{API_BASE_URL}/search", json=payload)
-    data = response.json()
-    
-    print(f"Status Code: {response.status_code}")
-    print(f"Response: {json.dumps(data, indent=2)}")
-    
-    return response.status_code == 200
+@pytest.mark.asyncio
+async def test_upload_invalid_magic_bytes(async_client, mock_user_id):
+    files = {"file": ("test.pdf", b"fake pdf content", "application/pdf")}
+    response = await async_client.post(
+        "/documents/upload",
+        files=files,
+        headers={"Authorization": f"Bearer {mock_user_id['token']}"}
+    )
+    assert response.status_code == 400
+    assert "Invalid PDF format" in response.json()["detail"]
 
-def test_chat_endpoint():
-    """Test the chat endpoint."""
-    print("\n=== Testing Chat Endpoint ===")
+@pytest.mark.asyncio
+async def test_delete_document_api(async_client, mock_user_id, monkeypatch):
+    files = {"file": ("test.pdf", b"%PDF-1.4\n%mock\n", "application/pdf")}
+    res_up = await async_client.post("/documents/upload", files=files, headers={"Authorization": f"Bearer {mock_user_id['token']}"})
+    doc_id = res_up.json()["document_id"]
     
-    payload = {
-        "query": "Explain how RAG works"
-    }
+    mock_exists = False
+    mock_remove = False
+    mock_qdrant_delete = False
     
-    response = requests.post(f"{API_BASE_URL}/chat", json=payload)
-    data = response.json()
+    original_exists = os.path.exists
+    def fake_exists(path):
+        nonlocal mock_exists
+        if str(doc_id) in str(path):
+            mock_exists = True
+            return True
+        return original_exists(path)
+        
+    def fake_remove(path):
+        nonlocal mock_remove
+        if str(doc_id) in str(path):
+            mock_remove = True
+            
+    async def fake_qdrant_delete(collection_name, points_selector):
+        nonlocal mock_qdrant_delete
+        mock_qdrant_delete = True
+        
+    monkeypatch.setattr("os.path.exists", fake_exists)
+    monkeypatch.setattr("os.remove", fake_remove)
+    monkeypatch.setattr("services.ingestion.qdrant_client.delete", fake_qdrant_delete)
     
-    print(f"Status Code: {response.status_code}")
-    print(f"Response: {json.dumps(data, indent=2)}")
+    res_del = await async_client.delete(f"/documents/{doc_id}", headers={"Authorization": f"Bearer {mock_user_id['token']}"})
+    assert res_del.status_code == 200
     
-    return response.status_code == 200
+    import asyncio
+    await asyncio.sleep(0.5)
+    
+    async with AsyncSessionLocal() as session:
+        doc = await session.get(Document, uuid.UUID(doc_id))
+        assert doc is None
+        
+    assert mock_exists, "os.path.exists was not called to check file"
+    assert mock_remove, "os.remove was not called to delete file"
+    assert mock_qdrant_delete, "Qdrant delete was not called"
 
-def test_wikipedia_load():
-    """Test loading from Wikipedia."""
-    print("\n=== Testing Wikipedia Loading ===")
+@pytest.mark.asyncio
+async def test_cross_user_isolation(async_client, mock_user_id, other_user_id):
+    # User 1 creates conversation
+    res1 = await async_client.post("/conversations", headers={"Authorization": f"Bearer {mock_user_id['token']}"})
+    assert res1.status_code == 200
+    conv_id = res1.json()["conversation_id"]
     
-    payload = {
-        "source": "wikipedia",
-        "query": "Transformer models in NLP"
-    }
+    # User 2 tries to fetch User 1's conversation messages
+    res2 = await async_client.get(f"/conversations/{conv_id}/messages", headers={"Authorization": f"Bearer {other_user_id['token']}"})
+    assert res2.status_code == 404 # Isolated
     
-    response = requests.post(f"{API_BASE_URL}/load", json=payload)
-    data = response.json()
+@pytest.mark.asyncio
+async def test_chat_history(async_client, mock_user_id, monkeypatch):
+    # 1. Create Conversation
+    res_conv = await async_client.post("/conversations", headers={"Authorization": f"Bearer {mock_user_id['token']}"})
+    conv_id = res_conv.json()["conversation_id"]
     
-    print(f"Status Code: {response.status_code}")
-    print(f"Response: {json.dumps(data, indent=2)}")
+    # Mock retrieval and generation
+    async def mock_retrieve_context(query, uid, top_k=20):
+        return "mock context"
+        
+    async def mock_generate_answer(query, context, chat_history=None):
+        ans = f"Mock answer to {query}. History count: {len(chat_history) if chat_history else 0}"
+        return AnswerResponse(answer_found=True, answer=ans, citations=[])
+        
+    monkeypatch.setattr("api.routers.chat.retrieve_context", mock_retrieve_context)
+    monkeypatch.setattr("api.routers.chat.generate_answer", mock_generate_answer)
     
-    return response.status_code == 200
+    # 2. Send Message 1
+    res1 = await async_client.post(
+        f"/conversations/{conv_id}/messages", 
+        json={"content": "Hello 1"},
+        headers={"Authorization": f"Bearer {mock_user_id['token']}"}
+    )
+    assert res1.status_code == 200
+    ans1 = res1.json()
+    assert "Mock answer to Hello 1" in ans1["answer"]
+    assert "History count: 0" in ans1["answer"] # 0 because it's the first message (excluding itself)
+    
+    # 3. Send Message 2
+    res2 = await async_client.post(
+        f"/conversations/{conv_id}/messages", 
+        json={"content": "Hello 2"},
+        headers={"Authorization": f"Bearer {mock_user_id['token']}"}
+    )
+    assert res2.status_code == 200
+    ans2 = res2.json()
+    assert "Mock answer to Hello 2" in ans2["answer"]
+    assert "History count: 2" in ans2["answer"] # 1 user + 1 AI from msg 1
+    
+    # 4. Fetch History
+    res_hist = await async_client.get(f"/conversations/{conv_id}/messages", headers={"Authorization": f"Bearer {mock_user_id['token']}"})
+    hist = res_hist.json()
+    assert len(hist) == 4 # 2 user msgs + 2 ai msgs
+    assert hist[0]["content"] == "Hello 1"
+    assert hist[1]["role"] == "model"
+    assert hist[2]["content"] == "Hello 2"
+    assert hist[3]["role"] == "model"
 
-def main():
-    """Run all tests."""
-    print("Starting API Tests...")
+@pytest.mark.asyncio
+async def test_logout_revokes_token(async_client, mock_user_id):
+    # Try a protected route first, should succeed
+    res1 = await async_client.post("/conversations", headers={"Authorization": f"Bearer {mock_user_id['token']}"})
+    assert res1.status_code == 200
     
-    # Give Flask server time to start
-    time.sleep(2)
+    # Logout
+    res_logout = await async_client.post("/auth/logout", headers={"Authorization": f"Bearer {mock_user_id['token']}"})
+    assert res_logout.status_code == 200
     
-    tests = [
-        ("Index Endpoint", test_index_endpoint),
-        ("Load Text Document", test_load_text_document),
-        ("Search Endpoint", test_search_endpoint),
-        ("Chat Endpoint", test_chat_endpoint),
-        ("Wikipedia Load", test_wikipedia_load)
-    ]
-    
-    results = []
-    
-    for test_name, test_func in tests:
-        try:
-            success = test_func()
-            results.append((test_name, success))
-        except Exception as e:
-            print(f"Error in {test_name}: {str(e)}")
-            results.append((test_name, False))
-    
-    print("\n=== Test Results ===")
-    for test_name, success in results:
-        status = "PASSED" if success else "FAILED"
-        print(f"{test_name}: {status}")
-
-if __name__ == "__main__":
-    main() 
+    # Try the protected route again, should fail
+    res2 = await async_client.post("/conversations", headers={"Authorization": f"Bearer {mock_user_id['token']}"})
+    assert res2.status_code == 401
