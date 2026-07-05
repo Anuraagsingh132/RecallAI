@@ -11,7 +11,8 @@ services:
     name: recallai-qdrant
     runtime: image
     plan: free
-    image: docker.io/qdrant/qdrant:latest
+    image:
+      url: docker.io/qdrant/qdrant:latest
     envVars:
       - key: QDRANT__SERVICE__GRPC_PORT
         value: "6334"
