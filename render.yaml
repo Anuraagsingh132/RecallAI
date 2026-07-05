@@ -11,8 +11,7 @@ services:
     name: recallai-qdrant
     env: image
     plan: free
-    image:
-      url: qdrant/qdrant:latest
+    image: qdrant/qdrant:latest
     envVars:
       - key: QDRANT__SERVICE__GRPC_PORT
         value: "6334"
