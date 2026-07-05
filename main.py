@@ -39,7 +39,7 @@ logger = structlog.get_logger(__name__)
 
 sentry_dsn = settings.SENTRY_DSN
 if not sentry_dsn and os.environ.get("ENV") == "production":
-    raise ValueError("SENTRY_DSN must be set in production environment")
+    logger.warning("SENTRY_DSN is not set in production environment. Error tracking is disabled.")
 if sentry_dsn:
     sentry_sdk.init(
         dsn=sentry_dsn,
