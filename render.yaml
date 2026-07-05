@@ -9,9 +9,9 @@ services:
   # 2. Qdrant Vector Database (Private Service)
   - type: pserv
     name: recallai-qdrant
-    env: image
+    runtime: image
     plan: free
-    image: qdrant/qdrant:latest
+    image: docker.io/qdrant/qdrant:latest
     envVars:
       - key: QDRANT__SERVICE__GRPC_PORT
         value: "6334"
@@ -19,7 +19,7 @@ services:
   # 3. Web Service (FastAPI)
   - type: web
     name: recallai-web
-    env: docker
+    runtime: docker
     plan: free
     dockerfilePath: Dockerfile
     envVars:
