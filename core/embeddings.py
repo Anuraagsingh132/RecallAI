@@ -21,6 +21,10 @@ class EmbeddingFatalError(Exception):
     retry=retry_if_exception_type(EmbeddingError)
 )
 async def generate_embeddings(texts: list[str]) -> list[list[float]]:
+    """
+    Generate embeddings for a list of texts.
+    Callers MUST catch EmbeddingFatalError which is raised on non-retriable failures.
+    """
     if API_KEY == "dummy" and os.environ.get("ENV") != "testing":
         return [[0.1] * 768 for _ in texts]
         
@@ -40,3 +44,8 @@ async def generate_embeddings(texts: list[str]) -> list[list[float]]:
             raise EmbeddingError(f"Temporary API Failure: {e}")
         else:
             raise EmbeddingFatalError(f"Unexpected Error: {e}")
+
+async def generate_query_embedding(text: str) -> list[float]:
+    """Thin wrapper to embed a single query string."""
+    embeddings = await generate_embeddings([text])
+    return embeddings[0]

@@ -11,6 +11,7 @@ if QDRANT_URL:
 else:
     qdrant_client = AsyncQdrantClient(path=QDRANT_PATH)
 COLLECTION_NAME = "recallai_chunks"
+RRF_K = 60
 
 async def init_qdrant():
     """Create collection if it doesn't exist."""

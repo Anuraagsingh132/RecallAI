@@ -1,4 +1,5 @@
 import uuid
+import structlog
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import select
 from core.database import AsyncSessionLocal
@@ -91,30 +92,44 @@ async def send_message(
         chat_history_models = list(reversed(recent_messages))
         chat_history = [{"role": m.role, "content": m.content} for m in chat_history_models]
 
+    logger = structlog.get_logger(__name__)
+
     async def event_generator():
         from services.generation import stream_answer
-        # 4. Retrieve Context
-        context, sources = await retrieve_context(request.content, current_user.id, request.document_ids)
-        
-        # Yield sources instantly
-        yield f"event: sources\ndata: {json.dumps(sources)}\n\n"
-        
-        # 5. Generate and yield tokens
         full_answer = ""
-        async for token in stream_answer(request.content, context, chat_history):
-            full_answer += token
-            # Yield token event
-            # We encode the token to JSON string to safely escape newlines and quotes
-            yield f"event: token\ndata: {json.dumps(token)}\n\n"
+        
+        try:
+            # 4. Retrieve Context
+            context, sources = await retrieve_context(
+                request.content, 
+                current_user.id, 
+                request.document_ids,
+                chat_history=chat_history
+            )
             
-        # 6. Save AI Message
-        async with AsyncSessionLocal() as session:
-            ai_msg_id = uuid.uuid4()
-            ai_msg = Message(id=ai_msg_id, conversation_id=conversation_id, role="model", content=full_answer)
-            session.add(ai_msg)
-            await session.commit()
+            # Yield sources instantly
+            yield f"event: sources\ndata: {json.dumps(sources)}\n\n"
             
-        yield "event: done\ndata: {}\n\n"
+            # 5. Generate and yield tokens
+            async for token in stream_answer(request.content, context, chat_history):
+                full_answer += token
+                # Yield token event
+                yield f"event: token\ndata: {json.dumps(token)}\n\n"
+                
+            yield "event: done\ndata: {}\n\n"
+            
+        except Exception as e:
+            logger.error("generation_failed", error=str(e), conversation_id=str(conversation_id))
+            yield f"event: error\ndata: {json.dumps({'message': 'Something went wrong generating a response.'})}\n\n"
+            
+        finally:
+            # 6. Save AI Message
+            if full_answer:
+                async with AsyncSessionLocal() as session:
+                    ai_msg_id = uuid.uuid4()
+                    ai_msg = Message(id=ai_msg_id, conversation_id=conversation_id, role="model", content=full_answer)
+                    session.add(ai_msg)
+                    await session.commit()
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 

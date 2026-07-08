@@ -4,6 +4,7 @@ from typing import Optional, List
 from datetime import datetime, timezone
 
 from sqlalchemy import Column, DateTime
+from sqlalchemy.dialects.postgresql import TSVECTOR
 
 def utc_now():
     return datetime.now(timezone.utc)
@@ -41,7 +42,10 @@ class DocumentChunk(SQLModel, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     document_id: uuid.UUID = Field(foreign_key="document.id", ondelete="CASCADE", index=True)
     page_number: int = Field(default=1)
+    chunk_index: Optional[int] = Field(default=None)
+    section_title: Optional[str] = Field(default=None)
     content: str
+    content_tsv: Optional[str] = Field(default=None, sa_column=Column(TSVECTOR))
     
     document: Document = Relationship(back_populates="chunks")
 
@@ -76,3 +80,24 @@ class TokenBlocklist(SQLModel, table=True):
     jti: str = Field(index=True, unique=True)
     expires_at: datetime = Field(sa_column=Column(DateTime(timezone=True)))
 
+"""
+# MANUAL MIGRATION REQUIRED FOR HYBRID SEARCH
+# Since Alembic / migrations are not being managed here, you must run this SQL manually on your PostgreSQL instance:
+
+ALTER TABLE documentchunk ADD COLUMN content_tsv tsvector;
+
+CREATE INDEX ix_documentchunk_content_tsv ON documentchunk USING GIN(content_tsv);
+
+CREATE OR REPLACE FUNCTION documentchunk_tsvector_trigger() RETURNS trigger AS $$
+begin
+  new.content_tsv := to_tsvector('english', new.content);
+  return new;
+end
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER tsvectorupdate BEFORE INSERT OR UPDATE
+ON documentchunk FOR EACH ROW EXECUTE PROCEDURE documentchunk_tsvector_trigger();
+
+# Update existing rows:
+UPDATE documentchunk SET content = content;
+"""
