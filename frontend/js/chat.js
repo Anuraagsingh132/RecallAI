@@ -1,4 +1,4 @@
-import { fetchApi } from './api.js';
+import { fetchApi, API_BASE_URL } from './api.js';
 import { renderMarkdown, showToast } from './ui.js';
 import { prependNewConversation } from './conversations.js';
 
@@ -173,7 +173,7 @@ async function handleSendMessage(e) {
         }
 
         const token = localStorage.getItem('recallai_token');
-        const response = await fetch(`http://localhost:8000/conversations/${activeConversationId}/messages`, {
+        const response = await fetch(`${API_BASE_URL}/conversations/${activeConversationId}/messages`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
