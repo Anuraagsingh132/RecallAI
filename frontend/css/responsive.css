@@ -1,0 +1,89 @@
+/* Desktop First approach, max-width breakpoints */
+
+.mobile-only {
+    display: none !important;
+}
+
+@media (max-width: 768px) {
+    .mobile-only {
+        display: flex !important;
+    }
+
+    .sidebar {
+        position: fixed;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        transform: translateX(-100%);
+        box-shadow: var(--shadow-lg);
+    }
+    .sidebar.open {
+        transform: translateX(0);
+    }
+
+    .panel-header {
+        display: none; /* Hide desktop header on mobile */
+    }
+
+    .documents-container {
+        padding: 0 var(--space-3) var(--space-3);
+    }
+
+    .drop-zone {
+        margin: var(--space-3);
+    }
+
+    .upload-actions {
+        flex-direction: column;
+        padding: var(--space-3);
+        border-bottom: 1px solid var(--clr-border);
+    }
+    .search-input {
+        max-width: 100%;
+    }
+
+    /* Stack table on mobile */
+    .docs-table, .docs-table tbody, .docs-table tr, .docs-table td {
+        display: block;
+        width: 100%;
+    }
+    .docs-table thead {
+        display: none;
+    }
+    .docs-table tr {
+        margin-bottom: var(--space-4);
+        border: 1px solid var(--clr-border);
+        border-radius: var(--radius-md);
+        padding: var(--space-2);
+        background-color: var(--clr-bg-surface);
+    }
+    .docs-table td {
+        border-bottom: none;
+        padding: var(--space-1) var(--space-2);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .docs-table td::before {
+        content: attr(data-label);
+        font-weight: 500;
+        color: var(--clr-text-secondary);
+        margin-right: var(--space-3);
+    }
+    .docs-table td:last-child {
+        justify-content: flex-end;
+        border-top: 1px solid var(--clr-border);
+        margin-top: var(--space-2);
+        padding-top: var(--space-2);
+    }
+
+    .message {
+        max-width: 95%;
+    }
+    .chat-history {
+        padding: var(--space-3);
+    }
+    .chat-input-container {
+        padding: var(--space-3);
+    }
+}

@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html class="light" lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <link rel="icon" href="data:,">
+    <title>RecallAI</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-container": "#f1edec",
+                        "tertiary-fixed-dim": "#cac6c4",
+                        "primary-fixed-dim": "#c8c6c5",
+                        "on-error-container": "#93000a",
+                        "on-secondary-fixed-variant": "#0040a1",
+                        "on-secondary-container": "#fefcff",
+                        "inverse-primary": "#c8c6c5",
+                        "surface-variant": "#e5e2e1",
+                        "on-primary-container": "#858383",
+                        "on-background": "#1c1b1b",
+                        "on-tertiary-container": "#868382",
+                        "on-primary-fixed": "#1c1b1b",
+                        "surface-container-low": "#f7f3f2",
+                        "secondary-container": "#2a6def",
+                        "surface": "#fdf8f8",
+                        "surface-dim": "#ddd9d8",
+                        "secondary-fixed": "#dae2ff",
+                        "primary": "#000000",
+                        "on-tertiary-fixed-variant": "#484645",
+                        "on-secondary-fixed": "#001848",
+                        "error": "#ba1a1a",
+                        "inverse-on-surface": "#f4f0ef",
+                        "on-primary": "#ffffff",
+                        "inverse-surface": "#313030",
+                        "on-tertiary-fixed": "#1c1b1a",
+                        "on-surface-variant": "#444748",
+                        "on-surface": "#1c1b1b",
+                        "tertiary-fixed": "#e6e2df",
+                        "secondary-fixed-dim": "#b2c5ff",
+                        "on-primary-fixed-variant": "#474746",
+                        "on-secondary": "#ffffff",
+                        "tertiary-container": "#1c1b1a",
+                        "surface-container-lowest": "#ffffff",
+                        "on-error": "#ffffff",
+                        "secondary": "#0053ce",
+                        "outline": "#747878",
+                        "surface-container-highest": "#e5e2e1",
+                        "surface-tint": "#5f5e5e",
+                        "on-tertiary": "#ffffff",
+                        "primary-fixed": "#e5e2e1",
+                        "background": "#fdf8f8",
+                        "primary-container": "#1c1b1b",
+                        "error-container": "#ffdad6",
+                        "surface-container-high": "#ebe7e6",
+                        "surface-bright": "#fdf8f8",
+                        "tertiary": "#000000",
+                        "outline-variant": "#c4c7c7"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "xl": "48px",
+                        "md": "16px",
+                        "container-max": "1200px",
+                        "lg": "24px",
+                        "gutter": "24px",
+                        "sidebar-width": "240px",
+                        "unit": "4px",
+                        "xs": "4px",
+                        "sm": "8px"
+                    },
+                    "fontFamily": {
+                        "h3": ["Inter"],
+                        "mono-sm": ["Inter"],
+                        "label-md": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "h1-mobile": ["Inter"],
+                        "h2": ["Inter"],
+                        "h1": ["Inter"],
+                        "body-md": ["Inter"]
+                    },
+                    "fontSize": {
+                        "h3": ["18px", {"lineHeight": "1.4", "fontWeight": "600"}],
+                        "mono-sm": ["13px", {"lineHeight": "1.5", "fontWeight": "400"}],
+                        "label-md": ["12px", {"lineHeight": "1", "letterSpacing": "0.01em", "fontWeight": "500"}],
+                        "body-lg": ["16px", {"lineHeight": "1.6", "fontWeight": "400"}],
+                        "h1-mobile": ["26px", {"lineHeight": "1.2", "letterSpacing": "-0.01em", "fontWeight": "700"}],
+                        "h2": ["24px", {"lineHeight": "1.3", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                        "h1": ["32px", {"lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "body-md": ["14px", {"lineHeight": "1.5", "fontWeight": "400"}]
+                    }
+                }
+            }
+        }
+</script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        /* Custom scrollbar for webkit */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #e5e2e1; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #cac6c4; }
+        .soft-shadow { box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05); }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        
+        .view.hidden { display: none !important; }
+        .panel.hidden { display: none !important; }
+        
+        #toast-container { position: fixed; top: 1rem; right: 1rem; z-index: 9999; display: flex; flex-direction: column; gap: 0.5rem; }
+        .toast { padding: 1rem; border-radius: 0.5rem; color: white; opacity: 0; transition: opacity 0.3s; }
+        .toast.show { opacity: 1; }
+        .toast.success { background-color: #137333; }
+        .toast.error { background-color: #ba1a1a; }
+        .toast.info { background-color: #0053ce; }
+        
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 10000; }
+        .modal-overlay.hidden { display: none; }
+        .modal { background: white; padding: 24px; border-radius: 8px; width: 100%; max-width: 400px; }
+
+        /* Basic Markdown styles within Tailwind */
+        .markdown-body p { margin-bottom: 1rem; }
+        .markdown-body h1, .markdown-body h2, .markdown-body h3 { font-weight: 600; margin-top: 1.5rem; margin-bottom: 0.5rem; }
+        .markdown-body h1 { font-size: 1.5rem; }
+        .markdown-body h2 { font-size: 1.25rem; }
+        .markdown-body h3 { font-size: 1.125rem; }
+        .markdown-body ul { list-style-type: disc; padding-left: 1.5rem; margin-bottom: 1rem; }
+        .markdown-body ol { list-style-type: decimal; padding-left: 1.5rem; margin-bottom: 1rem; }
+    </style>
+    <!-- Third Party Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
+    <!-- App Entry Point -->
+    <script type="module" src="js/app.js" defer></script>
+</head>
+<body class="bg-background text-on-surface h-screen w-screen overflow-hidden flex font-body-md text-body-md selection:bg-surface-variant selection:text-on-surface">
+    <div id="toast-container" aria-live="polite"></div>
+
+    <!-- AUTH VIEW -->
+    <div id="auth-view" class="view w-full h-full flex items-center justify-center p-md bg-[#FAFAF9]">
+        <div class="w-full max-w-[420px] bg-surface-container-lowest rounded-xl border border-outline-variant soft-shadow p-xl flex flex-col gap-lg">
+            <header class="text-center mb-sm">
+                <h1 class="font-h2 text-h2 text-primary flex items-center justify-center gap-sm">
+                    <span class="material-symbols-outlined text-[28px]" style="font-variation-settings: 'FILL' 1;">auto_awesome_motion</span> RecallAI
+                </h1>
+                <p class="font-body-md text-body-md text-on-surface-variant mt-xs">Welcome to your workspace</p>
+            </header>
+            
+            <nav class="flex w-full border-b border-outline-variant mb-md">
+                <button id="tab-login" class="active flex-1 pb-sm border-b-2 border-primary font-label-md text-label-md text-primary text-center transition-colors">
+                    Login
+                </button>
+                <button id="tab-register" class="flex-1 pb-sm border-b-2 border-transparent font-label-md text-label-md text-on-surface-variant hover:text-on-surface text-center transition-colors">
+                    Register
+                </button>
+            </nav>
+
+            <form id="login-form" class="flex flex-col gap-md">
+                <div class="flex flex-col gap-xs">
+                    <label class="font-label-md text-label-md text-on-surface ml-xs" for="login-username">Email or Username</label>
+                    <input class="w-full bg-surface-container-low border border-outline-variant rounded-lg px-md py-sm font-body-md text-body-md text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary transition-all" id="login-username" name="username" placeholder="hello@example.com" type="text" required>
+                </div>
+                <div class="flex flex-col gap-xs">
+                    <div class="flex justify-between items-center ml-xs mr-xs">
+                        <label class="font-label-md text-label-md text-on-surface" for="login-password">Password</label>
+                    </div>
+                    <input class="w-full bg-surface-container-low border border-outline-variant rounded-lg px-md py-sm font-body-md text-body-md text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary transition-all" id="login-password" name="password" placeholder="••••••••" type="password" required>
+                </div>
+                <button class="w-full mt-sm bg-primary text-on-primary font-label-md text-label-md py-[12px] rounded-lg hover:bg-inverse-surface transition-colors flex items-center justify-center gap-sm" type="submit">Sign In <span class="material-symbols-outlined text-[16px]">arrow_forward</span></button>
+            </form>
+
+            <form id="register-form" class="flex flex-col gap-md hidden">
+                <div class="flex flex-col gap-xs">
+                    <label class="font-label-md text-label-md text-on-surface ml-xs" for="register-username">Username</label>
+                    <input class="w-full bg-surface-container-low border border-outline-variant rounded-lg px-md py-sm font-body-md text-body-md text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary transition-all" id="register-username" name="username" placeholder="johndoe" type="text" required>
+                </div>
+                <div class="flex flex-col gap-xs">
+                    <label class="font-label-md text-label-md text-on-surface ml-xs" for="register-password">Password</label>
+                    <input class="w-full bg-surface-container-low border border-outline-variant rounded-lg px-md py-sm font-body-md text-body-md text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary transition-all" id="register-password" name="password" placeholder="••••••••" type="password" required minlength="6">
+                </div>
+                <button class="w-full mt-sm bg-primary text-on-primary font-label-md text-label-md py-[12px] rounded-lg hover:bg-inverse-surface transition-colors flex items-center justify-center gap-sm" type="submit">Create Account</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- APP VIEW -->
+    <div id="app-view" class="view w-full h-full flex hidden">
+        <!-- SideNavBar -->
+        <nav id="sidebar" class="w-sidebar-width h-screen fixed left-0 top-0 border-r border-outline-variant bg-surface-container-low dark:bg-surface-container-low text-primary dark:text-primary font-body-md text-body-md flex flex-col p-md z-20">
+            <div class="mb-lg">
+                <h2 class="font-h2 text-h2 font-bold text-on-surface flex items-center gap-2">
+                    <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">auto_awesome</span> RecallAI
+                </h2>
+                <p class="font-label-md text-label-md text-on-surface-variant mt-1">AI Intelligence</p>
+                <button id="close-sidebar-btn" class="md:hidden mt-2 p-1 text-on-surface-variant hover:bg-surface-container rounded">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            
+            <button id="upload-sidebar-btn" class="w-full bg-primary text-on-primary rounded-lg py-2 px-4 font-label-md text-label-md flex justify-center items-center gap-2 mb-lg hover:opacity-90 transition-opacity scale-95 active:scale-100 transition-transform">
+                <span class="material-symbols-outlined text-[16px]">upload</span> Upload PDFs
+            </button>
+
+            <ul class="flex-1 space-y-1 overflow-y-auto">
+                <li>
+                    <a id="nav-docs" class="flex items-center gap-3 px-3 py-2 text-on-surface-variant hover:bg-surface-container dark:hover:bg-surface-container rounded-lg transition-colors duration-150 cursor-pointer">
+                        <span class="material-symbols-outlined text-[18px]">description</span>
+                        <span>Documents</span>
+                    </a>
+                </li>
+                <li>
+                    <div class="flex items-center justify-between px-3 py-2 text-on-surface-variant mt-4">
+                        <span class="font-label-md font-semibold text-label-md">Conversations</span>
+                        <button id="new-chat-btn" class="hover:text-primary">
+                            <span class="material-symbols-outlined text-[18px]">add</span>
+                        </button>
+                    </div>
+                </li>
+                <div id="conversations-list" class="space-y-1 mt-1">
+                    <!-- Conversations list here -->
+                </div>
+            </ul>
+
+            <div class="mt-auto pt-md border-t border-outline-variant">
+                <div class="flex items-center gap-3 px-3 py-2 text-on-surface-variant rounded-lg">
+                    <div class="w-8 h-8 rounded-full bg-surface-container-highest flex items-center justify-center font-bold text-primary" id="user-initial">U</div>
+                    <span id="current-username" class="flex-1 truncate">User</span>
+                    <button id="logout-btn" class="hover:text-primary" title="Logout">
+                        <span class="material-symbols-outlined text-[18px]">logout</span>
+                    </button>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main Content Area -->
+        <main class="ml-sidebar-width flex-1 flex flex-col h-screen bg-background relative w-full overflow-hidden">
+            <header class="h-16 border-b border-outline-variant flex items-center px-lg bg-surface shrink-0 z-10 sticky top-0 justify-between">
+                <div class="flex items-center gap-2 text-on-surface-variant">
+                    <button id="open-sidebar-btn" class="md:hidden text-on-surface-variant p-sm rounded-lg hover:bg-surface-container mr-2">
+                        <span class="material-symbols-outlined">menu</span>
+                    </button>
+                    <span class="font-h3 text-h3 font-bold text-on-surface" id="mobile-header-title">Documents</span>
+                </div>
+            </header>
+
+            <!-- Document Library Panel -->
+            <div id="panel-docs" class="panel flex-1 overflow-y-auto w-full">
+                <div class="p-lg md:p-xl max-w-container-max mx-auto w-full flex-1">
+                    <div class="mb-lg">
+                        <h1 class="font-h1 text-h1 text-on-surface">Document Library</h1>
+                        <p class="font-body-md text-body-md text-on-surface-variant mt-sm">Manage and organize your AI-processed files.</p>
+                    </div>
+
+                    <!-- Upload Zone -->
+                    <div id="drop-zone" class="border border-dashed border-outline-variant rounded-xl bg-surface p-xl flex flex-col items-center justify-center text-center mb-xl hover:bg-surface-container-low transition-colors cursor-pointer group">
+                        <div class="w-12 h-12 rounded-full bg-surface-container flex items-center justify-center mb-md group-hover:bg-primary-fixed transition-colors">
+                            <span class="material-symbols-outlined text-[24px] text-on-surface-variant group-hover:text-primary transition-colors">cloud_upload</span>
+                        </div>
+                        <h3 class="font-h3 text-h3 text-on-surface mb-xs">Drag and drop files here</h3>
+                        <p class="font-body-md text-body-md text-on-surface-variant mb-md">or click to browse from your computer</p>
+                        <p class="font-label-md text-label-md text-outline">Supports PDF up to 50MB</p>
+                        <input type="file" id="file-input" accept="application/pdf" multiple class="hidden">
+                    </div>
+
+                    <!-- Documents Table Section -->
+                    <div class="bg-surface border border-outline-variant rounded-xl overflow-hidden">
+                        <div class="px-lg py-md border-b border-outline-variant flex justify-between items-center bg-surface-container-lowest">
+                            <div class="relative w-full max-w-xs">
+                                <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]">search</span>
+                                <input id="doc-search" class="w-full pl-10 pr-4 py-2 bg-surface-container-low border border-outline-variant rounded-lg font-body-md text-body-md focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary transition-all" placeholder="Search documents..." type="text"/>
+                            </div>
+                            <button id="upload-btn" class="hidden"></button> <!-- Hidden but kept for JS compatibility -->
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="border-b border-outline-variant bg-surface-container-lowest">
+                                        <th class="py-sm px-lg font-label-md text-label-md text-on-surface-variant font-medium w-1/2">Filename</th>
+                                        <th class="py-sm px-lg font-label-md text-label-md text-on-surface-variant font-medium">Upload Date</th>
+                                        <th class="py-sm px-lg font-label-md text-label-md text-on-surface-variant font-medium">Status</th>
+                                        <th class="py-sm px-lg font-label-md text-label-md text-on-surface-variant font-medium text-right">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="docs-list" class="divide-y divide-outline-variant">
+                                    <!-- Populated by JS -->
+                                </tbody>
+                            </table>
+                            <div id="docs-empty-state" class="hidden p-xl flex flex-col items-center justify-center text-center">
+                                <span class="material-symbols-outlined text-[48px] text-outline mb-4">description</span>
+                                <h3 class="font-h3 text-on-surface">No documents yet</h3>
+                                <p class="font-body-md text-on-surface-variant">Upload your first PDF to start chatting with it.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chat Panel -->
+            <div id="panel-chat" class="panel hidden flex-1 flex flex-col h-full relative">
+                <div id="chat-history" class="flex-1 overflow-y-auto px-lg py-xl flex flex-col items-center" aria-live="polite">
+                    <div id="chat-empty-state" class="w-full max-w-[800px] flex flex-col items-center justify-center h-full text-center opacity-70">
+                        <span class="material-symbols-outlined text-[48px] text-outline mb-4">forum</span>
+                        <h3 class="font-h3 text-h3 text-on-surface">How can I help?</h3>
+                        <p class="font-body-md text-on-surface-variant">Ask a question about your documents.</p>
+                    </div>
+                    <!-- Messages populated by JS -->
+                    <div id="chat-messages-container" class="w-full max-w-[800px] flex flex-col gap-lg pb-32"></div>
+                </div>
+
+                <!-- Input Area -->
+                <div class="absolute bottom-0 left-0 right-0 p-lg bg-gradient-to-t from-background via-background to-transparent pt-xl flex justify-center">
+                    <div class="w-full max-w-[800px]">
+                        <div class="bg-surface-container-lowest border border-outline-variant rounded-xl shadow-[0_4px_12px_rgba(0,0,0,0.05)] overflow-hidden focus-within:border-secondary focus-within:ring-1 focus-within:ring-secondary transition-all">
+                            
+                            <!-- Document Selector -->
+                            <div id="document-selector" class="px-3 py-2 bg-surface-container-low border-b border-outline-variant flex items-center gap-2 overflow-x-auto">
+                                <span class="font-label-md text-label-md text-on-surface-variant whitespace-nowrap">Search in:</span>
+                                <div id="selector-pills" class="flex gap-2">
+                                    <span class="pill all-docs active inline-flex items-center gap-1 bg-surface-container border border-outline-variant rounded-DEFAULT px-2 py-1 text-on-surface font-label-md text-label-md cursor-pointer hover:bg-primary hover:text-on-primary transition-colors" data-id="all">
+                                        All Documents
+                                    </span>
+                                </div>
+                            </div>
+                            
+                            <form id="chat-form" class="relative">
+                                <textarea id="chat-input" class="w-full bg-transparent border-none focus:ring-0 resize-none px-4 py-4 pr-12 min-h-[80px] text-on-surface font-body-md text-body-md placeholder:text-on-surface-variant" placeholder="Ask a question about these documents..." rows="1" required></textarea>
+                                <div class="absolute bottom-3 right-3 flex items-center gap-2">
+                                    <button type="submit" id="send-msg-btn" class="p-1.5 bg-primary text-on-primary hover:opacity-90 rounded-DEFAULT transition-opacity disabled:opacity-50 disabled:cursor-not-allowed">
+                                        <span class="material-symbols-outlined text-[20px]">arrow_upward</span>
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="text-center mt-2">
+                            <p class="font-label-md text-label-md text-on-surface-variant">AI can make mistakes. Verify important information.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Confirm Modal -->
+    <div id="confirm-modal" class="modal-overlay hidden">
+        <div class="modal">
+            <h3 id="modal-title" class="font-h3 text-h3 text-on-surface mb-2">Confirm Action</h3>
+            <p id="modal-desc" class="font-body-md text-on-surface-variant mb-6">Are you sure?</p>
+            <div class="flex justify-end gap-3">
+                <button id="modal-cancel" class="px-4 py-2 rounded-lg font-label-md text-on-surface bg-surface-container-high hover:bg-surface-variant transition-colors">Cancel</button>
+                <button id="modal-confirm" class="px-4 py-2 rounded-lg font-label-md text-on-primary bg-error hover:opacity-90 transition-opacity">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Prompt Modal -->
+    <div id="prompt-modal" class="modal-overlay hidden">
+        <div class="modal">
+            <h3 id="prompt-modal-title" class="font-h3 text-h3 text-on-surface mb-2">Enter Value</h3>
+            <p id="prompt-modal-desc" class="font-body-md text-on-surface-variant mb-4">Please enter a value:</p>
+            <input type="text" id="prompt-modal-input" class="w-full bg-surface-container-low border border-outline-variant rounded-lg px-md py-sm font-body-md text-body-md text-on-surface focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary transition-all mb-6">
+            <div class="flex justify-end gap-3">
+                <button id="prompt-modal-cancel" class="px-4 py-2 rounded-lg font-label-md text-on-surface bg-surface-container-high hover:bg-surface-variant transition-colors">Cancel</button>
+                <button id="prompt-modal-confirm" class="px-4 py-2 rounded-lg font-label-md text-on-primary bg-primary hover:opacity-90 transition-opacity">Save</button>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
