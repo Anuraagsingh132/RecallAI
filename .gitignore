@@ -56,3 +56,11 @@ qdrant_data/
 !requirements.txt
 !requirements-lock.txt
 backups/
+
+# Databases
+*.db
+*.db-shm
+*.db-wal
+
+# Frontend
+node_modules/
