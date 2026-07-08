@@ -95,6 +95,8 @@ app.include_router(documents.router)
 app.include_router(chat.router)
 app.include_router(auth.router)
 
+from fastapi.staticfiles import StaticFiles
+
 @app.get("/health")
 async def health_check():
     return {"status": "ok"}
@@ -110,3 +112,6 @@ async def global_exception_handler(request: Request, exc: Exception):
         status_code=500,
         content={"detail": "Internal Server Error"},
     )
+
+# Mount frontend static files last, so it doesn't override API routes
+app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")
