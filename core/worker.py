@@ -17,47 +17,31 @@ def trigger_new_job():
         _new_job_event.set()
 
 async def get_next_pending_job() -> tuple[uuid.UUID | None, uuid.UUID | None]:
-    """
-    Atomically claims a single PENDING job and returns its document_id.
-    Uses Postgres's FOR UPDATE SKIP LOCKED clause to ensure safe concurrent fetching.
-    """
-    stmt = text("""
-        UPDATE processingjob
-        SET status = 'PROCESSING', updated_at = CURRENT_TIMESTAMP
-        WHERE id = (
-            SELECT id FROM processingjob 
-            WHERE status = 'PENDING' 
-            FOR UPDATE SKIP LOCKED 
-            LIMIT 1
-        )
-        RETURNING document_id, id
-    """)
     async with engine.begin() as conn:
-        res = await conn.execute(stmt)
+        res = await conn.execute(text("SELECT id, document_id FROM processingjob WHERE status = 'PENDING' LIMIT 1"))
         row = res.fetchone()
-        if row:
-            doc_id = uuid.UUID(row[0]) if isinstance(row[0], str) else row[0]
-            job_id = uuid.UUID(row[1]) if isinstance(row[1], str) else row[1]
-            return doc_id, job_id
-        return None, None
+        if not row: return None, None
+        
+        job_id = row[0]
+        doc_id = row[1]
+        
+        # update it
+        await conn.execute(
+            text("UPDATE processingjob SET status = 'PROCESSING', updated_at = CURRENT_TIMESTAMP WHERE id = :job_id"),
+            {"job_id": str(job_id) if isinstance(job_id, uuid.UUID) else job_id}
+        )
+        
+        if isinstance(doc_id, str): doc_id = uuid.UUID(doc_id)
+        if isinstance(job_id, str): job_id = uuid.UUID(job_id)
+        return doc_id, job_id
 
 async def mark_job_failed(document_id: uuid.UUID):
-    """Marks a job as FAILED due to an unhandled exception."""
-    stmt = text("""
-        UPDATE processingjob
-        SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP
-        WHERE document_id = CAST(:doc_id AS UUID) AND status = 'PROCESSING'
-    """)
+    stmt = text("UPDATE processingjob SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE document_id = :doc_id")
     async with engine.begin() as conn:
         await conn.execute(stmt, {"doc_id": str(document_id)})
 
 async def mark_job_pending(document_id: uuid.UUID):
-    """Reverts a job to PENDING (e.g., during graceful shutdown)."""
-    stmt = text("""
-        UPDATE processingjob
-        SET status = 'PENDING', updated_at = CURRENT_TIMESTAMP
-        WHERE document_id = CAST(:doc_id AS UUID) AND status = 'PROCESSING'
-    """)
+    stmt = text("UPDATE processingjob SET status = 'PENDING', updated_at = CURRENT_TIMESTAMP WHERE document_id = :doc_id")
     async with engine.begin() as conn:
         res = await conn.execute(stmt, {"doc_id": str(document_id)})
         logger.info(f"mark_job_pending for {document_id} updated {res.rowcount} rows")

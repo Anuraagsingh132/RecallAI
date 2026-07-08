@@ -31,6 +31,7 @@ class Document(SQLModel, table=True):
     filename: str
     status: str = Field(default="PENDING", index=True)
     embedding_model_version: Optional[str] = Field(default=None)
+    created_at: datetime = Field(default_factory=utc_now, sa_column=Column(DateTime(timezone=True)))
     
     user: User = Relationship(back_populates="documents")
     chunks: List["DocumentChunk"] = Relationship(back_populates="document", cascade_delete=True)
@@ -55,6 +56,7 @@ class ProcessingJob(SQLModel, table=True):
 class Conversation(SQLModel, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     user_id: uuid.UUID = Field(foreign_key="user.id", ondelete="CASCADE", index=True)
+    title: Optional[str] = Field(default=None)
     created_at: datetime = Field(default_factory=utc_now, sa_column=Column(DateTime(timezone=True)))
     
     user: User = Relationship(back_populates="conversations")

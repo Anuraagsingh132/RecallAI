@@ -5,13 +5,16 @@ from core.database import AsyncSessionLocal
 from models.base import User, Conversation, Message
 from api.dependencies import get_current_user
 from services.retrieval import retrieve_context
-from services.generation import generate_answer, AnswerResponse
+from services.generation import stream_answer
 from pydantic import BaseModel
 
 router = APIRouter(prefix="/conversations", tags=["chat"])
 
+from typing import List, Optional
+
 class MessageRequest(BaseModel):
     content: str
+    document_ids: Optional[List[uuid.UUID]] = None
 
 @router.post("")
 async def create_conversation(current_user: User = Depends(get_current_user)):
@@ -52,13 +55,16 @@ async def get_messages(conversation_id: uuid.UUID, current_user: User = Depends(
         )
         return result.scalars().all()
 
+from fastapi.responses import StreamingResponse
+import json
+
 @router.post("/{conversation_id}/messages")
 async def send_message(
     conversation_id: uuid.UUID, 
     request: MessageRequest,
     current_user: User = Depends(get_current_user)
-) -> AnswerResponse:
-    """The core RAG endpoint. Accepts user message, runs retrieval, generates AI response, saves both."""
+):
+    """The core RAG endpoint with SSE streaming."""
     async with AsyncSessionLocal() as session:
         # 1. Verify ownership
         result = await session.execute(
@@ -73,9 +79,7 @@ async def send_message(
         session.add(user_msg)
         await session.commit()
         
-        # 3. Fetch History (up to 20 previous messages as per board decision)
-        # We fetch top 20, but we need them in chronological order, so we fetch DESC limit 20 then reverse.
-        # Actually since we just inserted the user message, we can fetch 21 and reverse, then drop the last one, or just exclude user_msg_id.
+        # 3. Fetch History (up to 20 previous messages)
         result = await session.execute(
             select(Message)
             .where(Message.conversation_id == conversation_id)
@@ -84,23 +88,94 @@ async def send_message(
             .limit(20)
         )
         recent_messages = result.scalars().all()
-        # Reverse to chronological
         chat_history_models = list(reversed(recent_messages))
         chat_history = [{"role": m.role, "content": m.content} for m in chat_history_models]
+
+    async def event_generator():
+        from services.generation import stream_answer
+        # 4. Retrieve Context
+        context, sources = await retrieve_context(request.content, current_user.id, request.document_ids)
         
-    # 4. Retrieve Context
-    context = await retrieve_context(request.content, current_user.id)
-    
-    # 5. Generate Answer
-    ai_response = await generate_answer(request.content, context, chat_history)
-    
-    # 6. Save AI Message
+        # Yield sources instantly
+        yield f"event: sources\ndata: {json.dumps(sources)}\n\n"
+        
+        # 5. Generate and yield tokens
+        full_answer = ""
+        async for token in stream_answer(request.content, context, chat_history):
+            full_answer += token
+            # Yield token event
+            # We encode the token to JSON string to safely escape newlines and quotes
+            yield f"event: token\ndata: {json.dumps(token)}\n\n"
+            
+        # 6. Save AI Message
+        async with AsyncSessionLocal() as session:
+            ai_msg_id = uuid.uuid4()
+            ai_msg = Message(id=ai_msg_id, conversation_id=conversation_id, role="model", content=full_answer)
+            session.add(ai_msg)
+            await session.commit()
+            
+        yield "event: done\ndata: {}\n\n"
+
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
+
+class ConversationUpdate(BaseModel):
+    title: str
+
+@router.patch("/{conversation_id}")
+async def rename_conversation(
+    conversation_id: uuid.UUID,
+    request: ConversationUpdate,
+    current_user: User = Depends(get_current_user)
+):
+    """Rename a conversation."""
     async with AsyncSessionLocal() as session:
-        ai_msg_id = uuid.uuid4()
-        # If no answer found, we might want to still save the exact text returned or a default string
-        final_answer = ai_response.answer if ai_response.answer_found else "I cannot find the answer in the provided documents."
-        ai_msg = Message(id=ai_msg_id, conversation_id=conversation_id, role="model", content=final_answer)
-        session.add(ai_msg)
-        await session.commit()
+        result = await session.execute(
+            select(Conversation).where(Conversation.id == conversation_id, Conversation.user_id == current_user.id)
+        )
+        conv = result.scalar_one_or_none()
+        if not conv:
+            raise HTTPException(status_code=404, detail="Conversation not found")
         
-    return ai_response
+        conv.title = request.title
+        await session.commit()
+    return {"message": "Conversation renamed successfully"}
+
+@router.delete("/{conversation_id}")
+async def delete_conversation(
+    conversation_id: uuid.UUID,
+    current_user: User = Depends(get_current_user)
+):
+    """Delete a conversation completely."""
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(
+            select(Conversation).where(Conversation.id == conversation_id, Conversation.user_id == current_user.id)
+        )
+        conv = result.scalar_one_or_none()
+        if not conv:
+            raise HTTPException(status_code=404, detail="Conversation not found")
+        
+        await session.delete(conv)
+        await session.commit()
+    return {"message": "Conversation deleted successfully"}
+
+@router.delete("/{conversation_id}/messages")
+async def clear_conversation(
+    conversation_id: uuid.UUID,
+    current_user: User = Depends(get_current_user)
+):
+    """Clear all messages in a conversation."""
+    async with AsyncSessionLocal() as session:
+        # Verify ownership
+        result = await session.execute(
+            select(Conversation).where(Conversation.id == conversation_id, Conversation.user_id == current_user.id)
+        )
+        conv = result.scalar_one_or_none()
+        if not conv:
+            raise HTTPException(status_code=404, detail="Conversation not found")
+        
+        # Delete messages manually since cascading delete is for conversation delete
+        # With SQLModel/SQLAlchemy async, we can execute a delete statement
+        from sqlalchemy import delete
+        await session.execute(delete(Message).where(Message.conversation_id == conversation_id))
+        await session.commit()
+    return {"message": "Conversation cleared successfully"}

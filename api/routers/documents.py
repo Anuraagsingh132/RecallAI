@@ -30,6 +30,14 @@ async def upload_document(
     if not magic_bytes.startswith(b"%PDF"):
         raise HTTPException(status_code=400, detail="Invalid PDF format")
     await file.seek(0)
+    
+    # Check for duplicates
+    async with AsyncSessionLocal() as session:
+        existing = await session.execute(
+            select(Document).where(Document.user_id == current_user.id, Document.filename == file.filename)
+        )
+        if existing.scalar_one_or_none():
+            raise HTTPException(status_code=409, detail="File with this name already exists")
         
     doc_id = uuid.uuid4()
     

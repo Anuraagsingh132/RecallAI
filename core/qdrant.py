@@ -19,8 +19,15 @@ async def init_qdrant():
             collection_name=COLLECTION_NAME,
             vectors_config=VectorParams(size=768, distance=Distance.COSINE) # text-embedding-004 is 768d
         )
-        await qdrant_client.create_payload_index(
-            collection_name=COLLECTION_NAME,
-            field_name="user_id",
-            field_schema="keyword"
-        )
+    
+    # Ensure indexes exist (idempotent)
+    await qdrant_client.create_payload_index(
+        collection_name=COLLECTION_NAME,
+        field_name="user_id",
+        field_schema="keyword"
+    )
+    await qdrant_client.create_payload_index(
+        collection_name=COLLECTION_NAME,
+        field_name="document_id",
+        field_schema="keyword"
+    )
