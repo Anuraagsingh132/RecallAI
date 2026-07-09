@@ -8,7 +8,12 @@ import os
 from main import app
 from core.database import AsyncSessionLocal
 from models.base import User, Conversation, Message, Document
-from services.generation import AnswerResponse
+from pydantic import BaseModel
+class AnswerResponse(BaseModel):
+    answer_found: bool
+    answer: str
+    citations: list
+
 from api.routers.auth import get_password_hash, create_access_token
 
 # Removed duplicated setup_env

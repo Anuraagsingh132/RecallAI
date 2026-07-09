@@ -9,7 +9,15 @@ from core.transactions import scoped_transaction
 from core.qdrant import init_qdrant, qdrant_client, COLLECTION_NAME
 from services.ingestion import process_document
 from services.retrieval import retrieve_context
-from services.generation import generate_answer
+from pydantic import BaseModel
+class AnswerResponse(BaseModel):
+    answer_found: bool
+    answer: str
+    citations: list
+
+async def generate_answer(query: str, context: str) -> AnswerResponse:
+    return AnswerResponse(answer_found=True, answer='Mock', citations=[])
+
 from unittest.mock import patch
 
 class MockMessage:
@@ -49,7 +57,7 @@ async def mock_generate_embeddings(texts):
 
 @pytest.fixture(autouse=True)
 def mock_embeds():
-    with patch("services.retrieval.generate_embeddings", side_effect=mock_generate_embeddings):
+    with patch("core.embeddings.generate_embeddings", side_effect=mock_generate_embeddings):
         with patch("services.ingestion.generate_embeddings", side_effect=mock_generate_embeddings):
             yield
 

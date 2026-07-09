@@ -50,11 +50,11 @@ jobs:
 
       - name: Run pip-audit
         run: |
-          pip-audit --ignore-vuln PYSEC-2026-1325 --ignore-vuln CVE-2026-33936
+          pip-audit
 
       - name: Run tests
         run: |
-          pytest tests/test_ingestion.py
+          pytest
         env:
           ENV: testing
           JWT_SECRET: test_secret
