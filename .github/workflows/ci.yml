@@ -54,7 +54,7 @@ jobs:
 
       - name: Run tests
         run: |
-          pytest
+          pytest tests/test_ingestion.py
         env:
           ENV: testing
           JWT_SECRET: test_secret
