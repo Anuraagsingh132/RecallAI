@@ -86,6 +86,7 @@ async def process_document(job_id: uuid.UUID):
         
         batch_child_chunks = []
         batch_child_payloads = []
+        batch_parent_chunks = []
         
         while True:
             item = await queue.get()
@@ -100,12 +101,10 @@ async def process_document(job_id: uuid.UUID):
                 
             parent_text, child_texts = item
             
-            # Save parent to SQLite
-            async with scoped_transaction() as session:
-                chunk = DocumentChunk(document_id=doc_id, content=parent_text, page_number=1)
-                session.add(chunk)
-                await session.flush()
-                parent_id = chunk.id
+            # Optimization: Generate UUID client-side and batch parent inserts to avoid N+1 DB roundtrips
+            chunk = DocumentChunk(id=uuid.uuid4(), document_id=doc_id, content=parent_text, page_number=1)
+            parent_id = chunk.id
+            batch_parent_chunks.append(chunk)
                 
             for child_text in child_texts:
                 batch_child_chunks.append(child_text)
@@ -118,6 +117,10 @@ async def process_document(job_id: uuid.UUID):
                 
             # Check Batch Limits
             if len(batch_child_chunks) >= settings.EMBEDDING_BATCH_SIZE:
+                async with scoped_transaction() as session:
+                    session.add_all(batch_parent_chunks)
+                batch_parent_chunks.clear()
+
                 await _flush_embedding_batch(batch_child_chunks, batch_child_payloads)
                 batch_child_chunks.clear()
                 batch_child_payloads.clear()
@@ -125,6 +128,9 @@ async def process_document(job_id: uuid.UUID):
             queue.task_done()
             
         # Flush remaining chunks
+        if batch_parent_chunks:
+            async with scoped_transaction() as session:
+                session.add_all(batch_parent_chunks)
         if batch_child_chunks:
             await _flush_embedding_batch(batch_child_chunks, batch_child_payloads)
             

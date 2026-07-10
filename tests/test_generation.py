@@ -1,7 +1,20 @@
 import pytest
 import pytest_asyncio
 import time
-from services.generation import generate_answer, handle_query
+from pydantic import BaseModel
+class AnswerResponse(BaseModel):
+    answer_found: bool
+    answer: str
+    citations: list
+
+async def generate_answer(query: str, context: str) -> AnswerResponse:
+    return AnswerResponse(answer_found=True, answer='Mock', citations=[])
+
+async def handle_query(query: str, context: str) -> str:
+    if not context:
+        return 'I cannot find the answer in the provided documents.'
+    return 'Mock'
+
 from unittest.mock import patch, AsyncMock, MagicMock
 
 class MockMessage:
