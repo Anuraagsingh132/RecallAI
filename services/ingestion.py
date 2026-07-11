@@ -3,7 +3,7 @@ import asyncio
 import uuid
 import os
 from qdrant_client.http.models import PointStruct, Filter, FieldCondition, MatchValue
-from sqlmodel import select
+from sqlmodel import select, delete
 from models.base import Document, DocumentChunk, ProcessingJob
 from core.database import AsyncSessionLocal
 from core.transactions import scoped_transaction
@@ -28,11 +28,9 @@ async def wipe_document_idempotent(document_id: uuid.UUID):
         logger.warning(f"Failed to wipe document {document_id} from Qdrant: {e}")
         # Ignore 404s or other errors during idempotency wipe
         
-    # 2. Wipe Database Chunks
+    # 2. Wipe Database Chunks (Bulk delete for O(1) performance instead of N+1)
     async with scoped_transaction() as session:
-        chunks = await session.execute(select(DocumentChunk).where(DocumentChunk.document_id == document_id))
-        for chunk in chunks.scalars().all():
-            await session.delete(chunk)
+        await session.execute(delete(DocumentChunk).where(DocumentChunk.document_id == document_id))
 
 async def execute_deletion_saga(document_id: uuid.UUID):
     async with scoped_transaction() as session:
